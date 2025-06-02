@@ -30,13 +30,13 @@ class Card(db.Model):
 
 # Görev #1. Kullanıcı tablosu oluşturun
 class User(db.Model):
-    # Sütunlar oluşturuluyor
-    #id
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    # Giriş
-    login=db.Column(db.String(100), nullable=False)
-    # Şifre
-    password=db.Column(db.String(100), nullable=False)
+	# Sütunlar oluşturuluyor
+	#id
+	id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+	# Giriş
+	email = db.Column(db.String(100), nullable=False)
+	# Şifre
+	password = db.Column(db.String(30), nullable=False)
 
 
 
@@ -51,32 +51,28 @@ def login():
         # Kullanıcı doğrulama
           # Veritabanındaki tüm kullanıcıları al
         users_db = User.query.all()
-        #Görev #4. Kullanıcıyı yetkilendir
+          # Her bir kullanıcıyı kontrol et  
         for user in users_db:
-            if form_login == user.login and form_password == user.password:
+            # Kullanıcı dogrulama (giriş bilgileri dogruysa)
+            if form_login == user.email and form_password == user.password:
                 return redirect('/index')
-            # Giriş başarılıysa yönlendirme yap
-            else:
-                error = 'Incorrect login or password'
-                return render_template('login.html', error=error)
-                
-                
-
-    
-    return render_template('login.html')		    
-          
+            # Kullanıcı dogrulama (giriş bilgileri doğru değilse)
+        error = 'Hatalı giriş veya şifre'
+        return render_template('login.html', error=error)    
+    # Giriş sayfasını çalıştırma
+    else:
+            return render_template('login.html')   
   
 @app.route('/reg', methods=['GET','POST'])
 def reg():
     if request.method == 'POST':
-        login= request.form['email']
+        email= request.form['email']
         password = request.form['password']
         
         #Görev #3 Kullanıcı verilerinin veri tabanına kaydedilmesini sağlayın
-        user = User(login=login,password=password)
-        db.session.add(user)
+        user = User(email=email, password=password)
+        db.session.add(user)    
         db.session.commit()
-
 
         
         return redirect('/')
@@ -120,16 +116,6 @@ def form_create():
         return redirect('/index')
     else:
         return render_template('create_card.html')
-
-# Kart silme işlemi
-@app.route('/delete/<int:id>', methods=['POST'])
-def delete(id):
-    card = Card.query.get_or_404(id)
-    db.session.delete(card)
-    db.session.commit()
-    return redirect('/')    
-
-
 
 if __name__ == "__main__":
     with app.app_context():

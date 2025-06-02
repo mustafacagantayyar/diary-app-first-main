@@ -34,11 +34,7 @@
         </a>
       </li>
       {% endfor %}
-      <form action="{{ url_for('delete', id=el.id) }}" method="post" style="margin-top: 10px;">
-          <button type="submit" onclick="return confirm('Silmek istediğine emin misin?')" style="background: none; border: none;">
-            <img src="{{ url_for('static', filename='img/delete.svg') }}" alt="Sil" width="20" height="20">
-          </button>
-        </form>
+      
       <li class="card card--creat">
           <a class="creat__link" href="{{url_for('create')}}"></a>
       </li>
