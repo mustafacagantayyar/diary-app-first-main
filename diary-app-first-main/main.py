@@ -1,5 +1,5 @@
 # İçe aktar
-from flask import Flask, render_template,request, redirect
+from flask import Flask, render_template,request, redirect,session,url_for
 # Veri tabanı kitaplığını bağlama
 from flask_sqlalchemy import SQLAlchemy
 
@@ -10,6 +10,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///diary.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # Veri tabanı oluşturma
 db = SQLAlchemy(app)
+app.secret_key = "rafa silva"
 # Tablo oluşturma
 
 class Card(db.Model):
@@ -22,7 +23,8 @@ class Card(db.Model):
     subtitle = db.Column(db.String(300), nullable=False)
     # Metin
     text = db.Column(db.Text, nullable=False)
-
+    # Kullacını ID si
+    user_id = db.Column(db.Integer,db.ForeignKey("user.id"), nullable=False)
     # Nesnenin ve kimliğin çıktısı
     def __repr__(self):
         return f'<Card {self.id}>'
@@ -40,28 +42,31 @@ class User(db.Model):
 
 
 
-# İçerik sayfasını çalıştırma
 @app.route('/', methods=['GET', 'POST'])
 def login():
     error = ''
     if request.method == 'POST':
-        form_login = request.form['email']
+        form_email = request.form['email']
         form_password = request.form['password']
         
         # Kullanıcı doğrulama
-          # Veritabanındaki tüm kullanıcıları al
-        users_db = User.query.all()
-          # Her bir kullanıcıyı kontrol et  
-        for user in users_db:
-            # Kullanıcı dogrulama (giriş bilgileri dogruysa)
-            if form_login == user.email and form_password == user.password:
-                return redirect('/index')
-            # Kullanıcı dogrulama (giriş bilgileri doğru değilse)
-        error = 'Hatalı giriş veya şifre'
-        return render_template('login.html', error=error)    
-    # Giriş sayfasını çalıştırma
+        # Veritabanında email ve şifreye göre kullanıcıyı bul
+        user = User.query.filter_by(email=form_email, password=form_password).first()
+        
+        if user:
+            # Kullanıcı bulundu ve şifre doğruysa
+            # Kullanıcının ID'sini oturuma kaydet
+            session['user_id'] = user.id  # <-- Burası önemli!
+            return redirect('/index')
+        else:
+            # Kullanıcı bulunamadı veya şifre yanlış
+            error = 'Hatalı giriş veya şifre'
+            return render_template('login.html', error=error)    
     else:
-            return render_template('login.html')   
+        # GET isteği ise, yani sayfa ilk yüklendiğinde
+        return render_template('login.html') 
+
+ 
   
 @app.route('/reg', methods=['GET','POST'])
 def reg():
@@ -80,12 +85,14 @@ def reg():
     else:    
         return render_template('registration.html')
 
-
 # İçerik sayfasını çalıştırma
 @app.route('/index')
 def index():
-    # Veri tabanı girişlerini görüntüleme
-    cards = Card.query.order_by(Card.id).all()
+    user_id = session.get('user_id')  # Oturumdaki kullanıcı ID'sini alıyoruz
+    if user_id:
+        cards = Card.query.filter_by(user_id=user_id).order_by(Card.id).all()
+    else:
+        cards = []  # Giriş yoksa boş liste döndürebilirsin
     return render_template('index.html', cards=cards)
 
 # Kayıt sayfasını çalıştırma
@@ -103,19 +110,29 @@ def create():
 # Giriş formu
 @app.route('/form_create', methods=['GET','POST'])
 def form_create():
+    user_id = session.get('user_id') 
+
+    #eğer kullanıcının user.id si yoksa 
+    if not user_id:
+        return redirect(url_for('login'))
     if request.method == 'POST':
         title =  request.form['title']
         subtitle =  request.form['subtitle']
         text =  request.form['text']
 
         # Veri tabanına gönderilecek bir nesne oluşturma
-        card = Card(title=title, subtitle=subtitle, text=text)
+        card = Card(title=title, subtitle=subtitle, text=text, user_id=user_id)
 
         db.session.add(card)
         db.session.commit()
         return redirect('/index')
     else:
         return render_template('create_card.html')
+
+@app.route('/logout')
+def logout():
+    session.pop('user_id', None) 
+    return redirect(url_for('login'))
 
 if __name__ == "__main__":
     with app.app_context():

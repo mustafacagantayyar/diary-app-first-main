@@ -21,6 +21,7 @@
   </header>
   <main>
     {% block content %}
+    <a href="{{ url_for('logout') }}">Çıkış Yap</a>
     <h1 class="main__title">Kayıtlarım</h1>
     <ul class="cards-list">
       {% for el in cards%}
